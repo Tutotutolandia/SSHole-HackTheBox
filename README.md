@@ -13,14 +13,13 @@ Los sistemas tradicionales (como Ubuntu o Debian) utilizan `glibc`, cuya impleme
 ---
 
 ## 2. Mecánica de la Colisión
-El bypass de autenticación se produce por una falla lógica en la interacción entre OpenSSH, la gestión de cuentas bloqueadas y el manejo de errores de `musl libc`. El proceso ocurre de la siguiente manera:
 
-1. **Cuentas Bloqueadas:** En Linux, las cuentas deshabilitadas o bloqueadas (como `root` por defecto en algunas distros, o cuentas de sistema como `bin`, `daemon`) almacenan un asterisco (`*`) o un signo de exclamación (`!`) en el campo del hash de la contraseña dentro de `/etc/shadow`.
-2. **Inyección del Atacante:** El atacante intenta iniciar sesión por SSH en una de estas cuentas bloqueadas enviando una contraseña anormalmente larga (superior a 256 caracteres).
-3. **Fallo en `musl libc`:** OpenSSH toma esta contraseña gigante y se la pasa a la función `crypt()` de `musl` para que la procese. Al exceder el límite de longitud soportado, `crypt()` falla de manera controlada y devuelve un código de error estandarizado: un asterisco (`*`).
-4. **La Colisión Lógica:** OpenSSH recibe el asterisco devuelto por `crypt()` y lo compara con el hash almacenado en `/etc/shadow` para esa cuenta. Como la cuenta está bloqueada, su hash también es un asterisco (`*`). 
-5. **Falso Positivo:** OpenSSH evalúa la condición `* == *` como **verdadera** (Match criptográfico exitoso). Al coincidir las cadenas, el demonio asume que la contraseña es correcta, ignora el hecho de que la cuenta estaba deshabilitada y otorga al atacante una shell interactiva.
+El bypass de autenticación se produce por una falla lógica fatal en cómo interactúan estos tres elementos: la gestión del *salt* en OpenSSH, el manejo de errores de `musl libc` y el envío de un payload sobredimensionado. El proceso ocurre de la siguiente manera:
 
+1. **Gestión del Salt en OpenSSH:** Cuando un usuario intenta iniciar sesión, OpenSSH busca la cuenta en `/etc/shadow` y extrae su campo de contraseña. En cuentas bloqueadas o de sistema (como `root` en Alpine, o `bin`), este campo no contiene un hash real, sino un asterisco (`*`) o una exclamación (`!`). OpenSSH toma esta cadena completa y la pasa como el parámetro **salt** a la función `crypt(password, salt)`.
+2. **Inyección de Contraseña Larga:** El atacante intenta autenticarse en esa cuenta bloqueada inyectando una contraseña anormalmente larga (superior a 256 caracteres).
+3. **Manejo de Errores en musl libc:** La función `crypt()` de la librería `musl` recibe la contraseña gigante y el *salt* (que es `*`). Debido a una limitación interna de `musl`, no procesa contraseñas de más de 256 caracteres. En lugar de detener el servicio, la función aborta la operación de forma controlada y devuelve una cadena de error estandarizada, que resulta ser exactamente un asterisco (`*`).
+4. **La Colisión y el Falso Positivo:** OpenSSH recibe el resultado de `crypt()` (el asterisco de error) y lo compara con el "hash" original almacenado en `/etc/shadow` (que también es un asterisco). Al evaluar la condición (`* == *`), la comparación resulta verdadera. OpenSSH asume erróneamente que la contraseña ingresada generó el hash correcto, ignorando que la cuenta es inaccesible, y otorga acceso interactivo al atacante.
 ---
 
 ## 3. Mitigación y Endurecimiento
