@@ -68,3 +68,7 @@ Una vez obtenida la shell interactiva, el atacante pudo ejecutar comandos no aut
 
 > **Evidencia 3: Ejecución de comandos / Artefactos adicionales**
 > *[Inserta aquí capturas de logs de auditoría, bash_history u otros artefactos solicitados por las preguntas del laboratorio de HTB]*
+
+> **Evidencia de desafio completado**
+<img width="1270" height="745" alt="image" src="https://github.com/user-attachments/assets/18b6e82d-c44a-4bef-9378-e5eaad2efe48" />
+
