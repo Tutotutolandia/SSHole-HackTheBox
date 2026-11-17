@@ -53,16 +53,6 @@ Se consultó `etc/os-release`:
 Get-Content .\SSHole\etc\os-release
 ```
 
-Los campos relevantes fueron:
-
-```ini
-NAME="Alpine Linux"
-ID=alpine
-VERSION_ID=3.24.3
-PRETTY_NAME="Alpine Linux v3.24"
-```
-
-**Respuesta: `Alpine Linux 3.24.3`.**
 
 ![Identificación del sistema operativo](evidencias/02-sistema-operativo.png)
 
@@ -76,15 +66,8 @@ Se examinó la entrada de la cuenta `adminsvc` en `etc/shadow`:
 Get-Content .\SSHole\etc\shadow | Select-String "adminsvc"
 ```
 
-Salida:
-
-```text
-adminsvc:*:20763:0:99999:7:::
-```
-
 El símbolo `*` ocupa el campo de la contraseña, impidiendo normalmente la autenticación convencional mediante contraseña. Según el *writeup* del laboratorio, la vulnerabilidad **SSHole** afecta la interacción de OpenSSH con la función `crypt()` en determinadas implementaciones basadas en musl: una contraseña demasiado larga puede producir `*` como resultado de error y coincidir indebidamente con dicho campo.
 
-**Respuesta indicada en el writeup: `CVE-2026-123158`.** Este identificador se toma de la documentación del ejercicio; los archivos locales por sí solos permiten identificar el patrón, pero no verificar de manera independiente el registro público del CVE.
 
 ![Cuenta con campo de contraseña asterisco](evidencias/03-cuenta-vulnerable.png)
 
@@ -98,7 +81,7 @@ Se filtraron los mensajes SSH:
 Get-Content .\SSHole\var\log\messages | Select-String "sshd"
 ```
 
-Eventos principales:
+Eventos relevantes:
 
 ```text
 Nov  6 11:27:05 ... Failed password for adminsvc from 192.168.72.1 port 61351 ssh2
@@ -106,8 +89,6 @@ Nov  6 11:27:08 ... Accepted password for adminsvc from 192.168.72.1 port 61351 
 ```
 
 El evento **`Accepted password` a las 11:27:08** confirma que se aceptó una autenticación de contraseña para la cuenta investigada. El año `2026` se toma del contexto temporal del laboratorio y de su writeup, puesto que estas líneas de syslog no muestran el año explícitamente.
-
-**Respuesta: `2026-11-06 11:27:08`.**
 
 ![Eventos SSH](evidencias/04-registros-ssh.png)
 
@@ -117,15 +98,11 @@ El evento **`Accepted password` a las 11:27:08** confirma que se aceptó una aut
 
 Tanto la entrada de `/etc/shadow` como los registros del servicio SSH identifican la cuenta `adminsvc`. El acceso aceptado provino de `192.168.72.1` en los artefactos analizados.
 
-**Respuesta: `adminsvc`.**
-
 *Evidencias relacionadas: 03 y 04.*
 
 ### Task 5 — ¿Qué valor permite la omisión de autenticación?
 
 El mecanismo descrito por el ejercicio depende de la coincidencia entre el carácter almacenado en `/etc/shadow` y el valor devuelto erróneamente por `crypt()`.
-
-**Respuesta: `*` (asterisco).**
 
 *Evidencia relacionada: 03.*
 
@@ -144,8 +121,6 @@ for ip in {1..254}; do nc -zvw 1 192.168.18.$ip 1-65535 2>&1 | grep -E "succeede
 ```
 
 El comando intenta comprobar puertos TCP mediante **Netcat (`nc`)** para direcciones de la subred `192.168.18.0/24`, filtrando mensajes que indiquen conexiones o puertos abiertos.
-
-**Respuesta:** el comando anterior, tal como aparece en el historial.
 
 ![Historial de comandos](evidencias/05-historial-atacante.png)
 
@@ -179,7 +154,6 @@ shred -u /tmp/.devenv
 
 La opción `--post-file` indica un intento de subir el contenido del archivo `.devenv` al destino remoto; `shred -u` intenta sobrescribir y eliminar el archivo. El historial **no demuestra por sí solo que el servidor remoto recibiera los datos correctamente**, pero sí deja constancia del comando de exfiltración introducido.
 
-**Respuesta: `https://devv.coding.eu/process`.**
 
 > **Evidencia de desafio completado**
 <img width="1270" height="745" alt="image" src="https://github.com/user-attachments/assets/18b6e82d-c44a-4bef-9378-e5eaad2efe48" />
